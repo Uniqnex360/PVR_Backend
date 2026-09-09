@@ -6,6 +6,7 @@ Dynamically uses settings.DATABASE_URL in production with asyncpg sanitization.
 import asyncio
 import os
 import sys
+import urllib.parse
 from logging.config import fileConfig
 
 from alembic import context
@@ -18,8 +19,42 @@ sys.path.insert(
 )
 
 from app.core.config import settings  # noqa: E402
-from app.core.database import Base, clean_async_db_url  # noqa: E402
+from app.core.database import Base  # noqa: E402
 from app.movie.models import *  # noqa: E402, F401, F403
+
+
+def _clean_url_for_alembic(url: str) -> str:
+    if not url:
+        return url
+    clean_url = url
+    if clean_url.startswith("postgres://"):
+        clean_url = clean_url.replace("postgres://", "postgresql+asyncpg://", 1)
+    elif clean_url.startswith("postgresql://") and not clean_url.startswith("postgresql+asyncpg://"):
+        clean_url = clean_url.replace("postgresql://", "postgresql+asyncpg://", 1)
+
+    parsed = urllib.parse.urlsplit(clean_url)
+    if not parsed.query:
+        return clean_url
+
+    query_params = urllib.parse.parse_qs(parsed.query)
+    filtered_params: dict[str, list[str]] = {}
+
+    for key, values in query_params.items():
+        if key == "sslmode":
+            filtered_params["ssl"] = values
+        elif key in ("channel_binding", "gssencmode", "target_session_attrs"):
+            continue
+        else:
+            filtered_params[key] = values
+
+    flat_query = []
+    for key, val_list in filtered_params.items():
+        for val in val_list:
+            flat_query.append(f"{key}={val}")
+
+    new_query = "&".join(flat_query)
+    return urllib.parse.urlunsplit(parsed._replace(query=new_query))
+
 
 config = context.config
 
@@ -29,7 +64,7 @@ if config.config_file_name is not None:
 # Inject sanitized environment DATABASE_URL into alembic config
 if getattr(settings, "DATABASE_URL", None):
     config.set_main_option(
-        "sqlalchemy.url", clean_async_db_url(settings.DATABASE_URL)
+        "sqlalchemy.url", _clean_url_for_alembic(settings.DATABASE_URL)
     )
 
 target_metadata = Base.metadata
