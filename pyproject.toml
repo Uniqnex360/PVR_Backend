@@ -1,0 +1,33 @@
+[project]
+name = "pvr-demo"
+version = "0.1.0"
+description = "Single-screen cinema booking demo — mergeable into Vybh"
+requires-python = ">=3.11"
+dependencies = [
+    "fastapi>=0.104",
+    "uvicorn[standard]>=0.24",
+    "sqlalchemy>=2.0",
+    "alembic>=1.13",
+    "pydantic>=2.0",
+    "pydantic-settings>=2.0",
+     "email-validator>=2.0.0",
+    "passlib[bcrypt]>=1.7",
+    "bcrypt<4.0.0",
+    "pyjwt>=2.8",
+    "httpx>=0.25",
+    "aiosqlite>=0.19",
+]
+[project.optional-dependencies]
+postgres = ["asyncpg>=0.29"]
+dev = [
+    "pytest>=7.4",
+    "pytest-asyncio>=0.23",
+    "asyncpg>=0.29",
+]
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+pythonpath = ["."]
+[tool.ruff]
+line-length = 88
+target-version = "py311"

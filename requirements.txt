@@ -1,0 +1,15 @@
+fastapi>=0.104
+uvicorn[standard]>=0.24
+sqlalchemy>=2.0
+alembic>=1.13
+pydantic>=2.0
+pydantic-settings>=2.0
+email-validator>=2.0.0
+passlib[bcrypt]>=1.7
+bcrypt<4.0.0
+pyjwt>=2.8
+httpx>=0.25
+aiosqlite>=0.19
+asyncpg>=0.29
+pytest>=7.4
+pytest-asyncio>=0.23
