@@ -5,17 +5,18 @@ from __future__ import annotations
 from fastapi import Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.config import settings
 from app.core.database import get_session
-from app.movie.email_service import ConsoleEmailService
+from app.movie.email_service import ConsoleEmailService, SMTPEmailService
 from app.movie.interfaces import IEmailService
 from app.movie.repository import MovieRepository
 from app.movie.services import MovieService
 
-_email_service_instance = ConsoleEmailService()
-
 
 def get_email_service() -> IEmailService:
-    return _email_service_instance
+    if settings.SMTP_USER and settings.SMTP_PASSWORD:
+        return SMTPEmailService()
+    return ConsoleEmailService()
 
 
 def get_movie_service(

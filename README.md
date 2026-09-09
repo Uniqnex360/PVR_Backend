@@ -15,3 +15,4 @@ pip install -r requirements.txt
 alembic upgrade head
 python scripts/seed.py
 uvicorn app.main:app --reload# PVR_Backend
+docker run --env-file .env -p 8000:8000 pvr-backend
