@@ -13,3 +13,4 @@ aiosqlite>=0.19
 asyncpg>=0.29
 pytest>=7.4
 pytest-asyncio>=0.23
+psycopg2-binary>=2.9.9

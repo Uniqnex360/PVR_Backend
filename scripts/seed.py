@@ -46,8 +46,13 @@ MOVIE_2_TIMES = [time(14, 0), time(17, 30), time(21, 0)]
 
 
 def _to_sync_url(async_url: str) -> str:
-    return async_url.replace("+aiosqlite", "").replace("+asyncpg", "")
-
+    sync_url = (
+        async_url.replace("+aiosqlite", "")
+        .replace("+asyncpg", "")
+    )
+    if "ssl=require" in sync_url:
+        sync_url = sync_url.replace("ssl=require", "sslmode=require")
+    return sync_url
 
 def seed(db_url: str | None = None) -> None:
     url = _to_sync_url(db_url or settings.DATABASE_URL)

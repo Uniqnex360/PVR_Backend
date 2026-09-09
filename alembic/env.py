@@ -1,5 +1,4 @@
 
-
 import asyncio
 import os
 import sys
@@ -9,18 +8,23 @@ from alembic import context
 from sqlalchemy import pool
 from sqlalchemy.ext.asyncio import async_engine_from_config
 
-# Ensure the backend root is importable regardless of cwd.
+
 sys.path.insert(
     0, os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 )
 
-from app.core.database import Base  # noqa: E402
-from app.movie.models import *  # noqa: E402, F401, F403
+from app.core.config import settings  
+from app.core.database import Base  
+from app.movie.models import *  
 
 config = context.config
 
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
+
+
+if getattr(settings, "DATABASE_URL", None):
+    config.set_main_option("sqlalchemy.url", settings.DATABASE_URL)
 
 target_metadata = Base.metadata
 
