@@ -1,13 +1,3 @@
-"""
-Phase 1 acceptance tests — T1 through T8.
-
-Run:
-    pytest tests/test_schema.py -v
-
-Against Postgres too:
-    TEST_DATABASE_URL=postgresql+asyncpg://user:pass@localhost/pvr_test \\
-        pytest tests/test_schema.py -v
-"""
 
 from __future__ import annotations
 
@@ -40,12 +30,11 @@ from app.movie.models import (
 BACKEND_DIR = Path(__file__).resolve().parent.parent
 
 
-# ---------------------------------------------------------------------------
-# Helpers
-# ---------------------------------------------------------------------------
+
+
+
 
 async def _make_full_schema(session: AsyncSession) -> dict:
-    """Insert a minimal but complete set of rows; return their objects."""
     user = User(
         id=uuid.uuid4(),
         email=f"t-{uuid.uuid4().hex[:8]}@test.local",
@@ -119,12 +108,11 @@ async def _make_full_schema(session: AsyncSession) -> dict:
     }
 
 
-# ---------------------------------------------------------------------------
-# T1 — alembic upgrade head + seed exits 0
-# ---------------------------------------------------------------------------
+
+
+
 
 def test_t1_migration_and_seed(tmp_path):
-    """Clean DB → alembic upgrade head → seed.py exits 0."""
     db_file = tmp_path / "t1.db"
     db_url = f"sqlite+aiosqlite:///{db_file}"
 
@@ -137,7 +125,7 @@ def test_t1_migration_and_seed(tmp_path):
 
     from scripts.seed import seed
 
-    seed(db_url)  # must not raise
+    seed(db_url)  
 
     from sqlalchemy import create_engine
 
@@ -157,15 +145,15 @@ def test_t1_migration_and_seed(tmp_path):
     eng.dispose()
 
 
-# ---------------------------------------------------------------------------
-# T2 — two showtimes, 234 seats each, occupancy independent
-# ---------------------------------------------------------------------------
+
+
+
 
 @pytest.mark.asyncio
 async def test_t2_occupancy_independent(session: AsyncSession):
     d = await _make_full_schema(session)
 
-    # Book 2 seats for showtime 1
+    
     b1 = Booking(
         id=uuid.uuid4(),
         user_id=d["user"].id,
@@ -187,7 +175,7 @@ async def test_t2_occupancy_independent(session: AsyncSession):
         )
     await session.commit()
 
-    # Showtime 2 has zero bookings — same physical seats still free
+    
     st2_count = (
         await session.execute(
             select(func.count())
@@ -197,7 +185,7 @@ async def test_t2_occupancy_independent(session: AsyncSession):
     ).scalar()
     assert st2_count == 0
 
-    # Book the SAME physical seats for showtime 2 — must succeed
+    
     b2 = Booking(
         id=uuid.uuid4(),
         user_id=d["user"].id,
@@ -217,12 +205,12 @@ async def test_t2_occupancy_independent(session: AsyncSession):
                 price_cents=10_000,
             )
         )
-    await session.commit()  # must not raise
+    await session.commit()  
 
 
-# ---------------------------------------------------------------------------
-# T3 — UNIQUE(row_id, code) rejects duplicate seat code
-# ---------------------------------------------------------------------------
+
+
+
 
 @pytest.mark.asyncio
 async def test_t3_duplicate_seat_code(session: AsyncSession):
@@ -232,20 +220,19 @@ async def test_t3_duplicate_seat_code(session: AsyncSession):
         id=uuid.uuid4(),
         row_id=d["row_a"].id,
         number=99,
-        code="A01",  # already exists
+        code="A01",  
     )
     session.add(dup)
     with pytest.raises(IntegrityError):
         await session.commit()
 
 
-# ---------------------------------------------------------------------------
-# T4 — ux_showtime_seat rejects duplicate (showtime, seat)
-# ---------------------------------------------------------------------------
+
+
+
 
 @pytest.mark.asyncio
 async def test_t4_ux_showtime_seat(session: AsyncSession):
-    """Assert the DB raised the IntegrityError, not application code."""
     d = await _make_full_schema(session)
 
     b1 = Booking(
@@ -268,7 +255,7 @@ async def test_t4_ux_showtime_seat(session: AsyncSession):
     )
     await session.commit()
 
-    # Second booking, same showtime, same seat → DB must reject
+    
     b2 = Booking(
         id=uuid.uuid4(),
         user_id=d["user"].id,
@@ -290,9 +277,9 @@ async def test_t4_ux_showtime_seat(session: AsyncSession):
         await session.commit()
 
 
-# ---------------------------------------------------------------------------
-# T5 — price snapshot is NOT auto-synced
-# ---------------------------------------------------------------------------
+
+
+
 
 @pytest.mark.asyncio
 async def test_t5_price_snapshot(session: AsyncSession):
@@ -318,11 +305,11 @@ async def test_t5_price_snapshot(session: AsyncSession):
     )
     await session.commit()
 
-    # Change the row price
+    
     d["row_a"].price_cents = 99_999
     await session.commit()
 
-    # The booking snapshot must be unchanged
+    
     bs = (
         await session.execute(
             select(BookingSeat).where(
@@ -333,9 +320,9 @@ async def test_t5_price_snapshot(session: AsyncSession):
     assert bs.price_cents == original_price
 
 
-# ---------------------------------------------------------------------------
-# T6 — seed is idempotent
-# ---------------------------------------------------------------------------
+
+
+
 
 def test_t6_seed_idempotent(tmp_path):
     db_file = tmp_path / "t6.db"
@@ -351,7 +338,7 @@ def test_t6_seed_idempotent(tmp_path):
     from scripts.seed import seed
 
     seed(db_url)
-    seed(db_url)  # second run — must not raise or duplicate
+    seed(db_url)  
 
     from sqlalchemy import create_engine
 
@@ -372,15 +359,15 @@ def test_t6_seed_idempotent(tmp_path):
     eng.dispose()
 
 
-# ---------------------------------------------------------------------------
-# T7 — every timestamp column reads back tz-aware
-# ---------------------------------------------------------------------------
+
+
+
 
 @pytest.mark.asyncio
 async def test_t7_timestamps_tz_aware(session: AsyncSession):
     d = await _make_full_schema(session)
 
-    # Force a re-read from the DB, not the identity map
+    
     user = (
         await session.execute(
             select(User).where(User.id == d["user"].id)
@@ -418,15 +405,12 @@ async def test_t7_timestamps_tz_aware(session: AsyncSession):
     )
 
 
-# ---------------------------------------------------------------------------
-# T8 — autogenerate produces no diff against the models
-# ---------------------------------------------------------------------------
+
+
+
 
 def test_t8_autogenerate_no_diff(tmp_path):
-    """
-    Apply the migration, then compare the resulting schema against the
-    models.  Any diff means the migration and models disagree.
-    """
+   
     from app.core.database import Base
 
     db_file = tmp_path / "t8.db"
@@ -439,7 +423,7 @@ def test_t8_autogenerate_no_diff(tmp_path):
     )
     command.upgrade(cfg, "head")
 
-    # Now compare what the migration produced against the models
+    
     from sqlalchemy import create_engine
 
     sync_url = db_url.replace("+aiosqlite", "")
@@ -453,7 +437,7 @@ def test_t8_autogenerate_no_diff(tmp_path):
 
     eng.dispose()
 
-    # Filter known SQLite noise (CHECK constraint rendering, etc.)
+    
     real_diff = [
         d
         for d in diff

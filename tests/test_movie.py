@@ -1,9 +1,3 @@
-"""
-Phase 3 Acceptance Tests — T12 through T14.
-
-Run:
-    pytest tests/test_movie.py -v
-"""
 
 from __future__ import annotations
 
@@ -36,7 +30,6 @@ def anyio_backend():
 
 
 async def _seed_test_data(session):
-    """Seed 1 cinema, 1 screen, 10 rows (234 seats), 1 movie, 3 showtimes for today."""
     user = User(
         id=uuid.uuid4(),
         email="testuser@pvr.local",
@@ -131,7 +124,6 @@ async def _seed_test_data(session):
 
 @pytest.mark.asyncio
 async def test_t12_showtimes_today_and_tomorrow(session):
-    """T12: GET /v1/showtimes returns the 3 seeded slots for today, empty for tomorrow."""
     app.dependency_overrides[get_session] = lambda: session
     data = await _seed_test_data(session)
 
@@ -164,10 +156,7 @@ async def test_t12_showtimes_today_and_tomorrow(session):
 
 @pytest.mark.asyncio
 async def test_t13_seat_map_all_available_initially(session):
-    """
-    T13: seat map payload: every seat has id, code, status, price_cents;
-    NO seat shows BOOKED before any booking exists. Total = 234 seats.
-    """
+  
     app.dependency_overrides[get_session] = lambda: session
     data = await _seed_test_data(session)
     st = data["showtimes"][0]
@@ -200,7 +189,6 @@ async def test_t13_seat_map_all_available_initially(session):
 
 @pytest.mark.asyncio
 async def test_t14_seat_map_with_bookings_marks_booked(session):
-    """T14: seat map for a showtime with 2 bookings marks exactly those seats BOOKED."""
     app.dependency_overrides[get_session] = lambda: session
     data = await _seed_test_data(session)
     st1 = data["showtimes"][0]

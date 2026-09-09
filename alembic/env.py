@@ -1,9 +1,4 @@
-"""
-Async Alembic environment.
 
-Imports all models so Base.metadata is fully populated before
-autogenerate runs.
-"""
 
 import asyncio
 import os

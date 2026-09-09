@@ -1,9 +1,4 @@
-"""
-Phase 5 Acceptance Tests — T19 and T20.
 
-Run:
-    pytest tests/test_ticket_email.py -v
-"""
 
 from __future__ import annotations
 

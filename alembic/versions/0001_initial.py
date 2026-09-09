@@ -1,13 +1,4 @@
-"""0001_initial — every table in one migration.
 
-This is the ONLY migration for Phase 1.  A second migration that adds
-booking_seats later means the unique index gets "forgotten in a
-follow-up" — the exact class of bug that turns into a double-sell.
-
-Revision ID: 0001
-Revises:
-Create Date: 2025-01-01 00:00:00.000000
-"""
 
 from typing import Sequence, Union
 

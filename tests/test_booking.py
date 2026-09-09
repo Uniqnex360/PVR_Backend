@@ -1,9 +1,4 @@
-"""
-Phase 4 Acceptance Tests — T15 through T18.
 
-Run:
-    pytest tests/test_booking.py -v
-"""
 
 from __future__ import annotations
 
@@ -36,7 +31,6 @@ def anyio_backend():
 
 
 async def _seed_cinema_and_showtime(session):
-    """Seed 1 cinema, 1 screen, 10 rows (234 seats), 1 movie, 1 showtime."""
     cinema = Cinema(
         id=uuid.uuid4(),
         name="PVR Lulu Mall",
@@ -116,14 +110,14 @@ async def _seed_cinema_and_showtime(session):
 
 def _generate_token_for_user(user_id: uuid.UUID) -> str:
     from app.auth.repository import UserRepository
-    dummy_repo = UserRepository(None)  # not queried for token creation
+    dummy_repo = UserRepository(None)  
     svc = AuthService(dummy_repo, jwt_secret=settings.JWT_SECRET)
     return svc._create_token(user_id)
 
 
-# ---------------------------------------------------------------------------
-# T15 — Happy path: pick 3 seats -> 201, booking row + 3 booking_seats
-# ---------------------------------------------------------------------------
+
+
+
 
 @pytest.mark.asyncio
 async def test_t15_happy_path_booking(session, session_factory):
@@ -164,7 +158,7 @@ async def test_t15_happy_path_booking(session, session_factory):
         assert len(body["seats"]) == 3
         assert body["total_price_cents"] == 19_000 * 3
 
-        # Verify /v1/bookings/me returns it
+        
         me_resp = await client.get(
             "/v1/bookings/me",
             headers={"Authorization": f"Bearer {token}"},
@@ -177,16 +171,13 @@ async def test_t15_happy_path_booking(session, session_factory):
     app.dependency_overrides.clear()
 
 
-# ---------------------------------------------------------------------------
-# T16 — RACE: two concurrent POST /v1/bookings for same seat -> one 201, one 409
-# ---------------------------------------------------------------------------
+
+
+
 
 @pytest.mark.asyncio
 async def test_t16_concurrency_race_same_seat(session, session_factory):
-    """
-    Two concurrent requests for the same showtime+seat -> exactly one 201 and one 409.
-    A third request for a DIFFERENT seat still succeeds (201).
-    """
+    
     async def _get_test_session():
         async with session_factory() as sess:
             yield sess
@@ -204,13 +195,13 @@ async def test_t16_concurrency_race_same_seat(session, session_factory):
     token_b = _generate_token_for_user(user_b.id)
     token_c = _generate_token_for_user(user_c.id)
 
-    target_seat = data["seats"][10].id  # e.g. A11
-    other_seat = data["seats"][11].id   # e.g. A12
+    target_seat = data["seats"][10].id  
+    other_seat = data["seats"][11].id   
 
     async with AsyncClient(
         transport=ASGITransport(app=app), base_url="http://test"
     ) as client:
-        # 1. Fire two concurrent requests for target_seat
+        
         async def book(tok, s_id):
             return await client.post(
                 "/v1/bookings",
@@ -231,16 +222,16 @@ async def test_t16_concurrency_race_same_seat(session, session_factory):
             f"Expected [201, 409], got {status_codes}"
         )
 
-        # 2. Third request for a DIFFERENT seat must succeed
+        
         resp_c = await book(token_c, other_seat)
         assert resp_c.status_code == 201
 
     app.dependency_overrides.clear()
 
 
-# ---------------------------------------------------------------------------
-# T17 — Same idempotency_key twice -> ONE booking returned
-# ---------------------------------------------------------------------------
+
+
+
 
 @pytest.mark.asyncio
 async def test_t17_idempotency_key(session, session_factory):
@@ -267,7 +258,7 @@ async def test_t17_idempotency_key(session, session_factory):
             "idempotency_key": "pay-click-12345",
         }
 
-        # First request
+        
         resp1 = await client.post(
             "/v1/bookings",
             json=payload,
@@ -276,7 +267,7 @@ async def test_t17_idempotency_key(session, session_factory):
         assert resp1.status_code == 201
         data1 = resp1.json()
 
-        # Second request with SAME idempotency_key
+        
         resp2 = await client.post(
             "/v1/bookings",
             json=payload,
@@ -291,9 +282,9 @@ async def test_t17_idempotency_key(session, session_factory):
     app.dependency_overrides.clear()
 
 
-# ---------------------------------------------------------------------------
-# T18 — Cancel -> seats return to AVAILABLE and can be rebooked
-# ---------------------------------------------------------------------------
+
+
+
 
 @pytest.mark.asyncio
 async def test_t18_cancel_frees_seats(session, session_factory):
@@ -316,7 +307,7 @@ async def test_t18_cancel_frees_seats(session, session_factory):
     async with AsyncClient(
         transport=ASGITransport(app=app), base_url="http://test"
     ) as client:
-        # 1. User 1 books the seat
+        
         resp1 = await client.post(
             "/v1/bookings",
             json={
@@ -328,7 +319,7 @@ async def test_t18_cancel_frees_seats(session, session_factory):
         assert resp1.status_code == 201
         booking_id = resp1.json()["id"]
 
-        # 2. User 2 tries to book same seat -> 409
+        
         conflict_resp = await client.post(
             "/v1/bookings",
             json={
@@ -339,7 +330,7 @@ async def test_t18_cancel_frees_seats(session, session_factory):
         )
         assert conflict_resp.status_code == 409
 
-        # 3. User 1 cancels the booking
+        
         cancel_resp = await client.post(
             f"/v1/bookings/{booking_id}/cancel",
             headers={"Authorization": f"Bearer {token1}"},
@@ -347,7 +338,7 @@ async def test_t18_cancel_frees_seats(session, session_factory):
         assert cancel_resp.status_code == 200
         assert cancel_resp.json()["status"] == "CANCELLED"
 
-        # 4. Seat map verifies seat is now AVAILABLE
+        
         sm_resp = await client.get(
             f"/v1/showtimes/{data['showtime'].id}/seats"
         )
@@ -358,7 +349,7 @@ async def test_t18_cancel_frees_seats(session, session_factory):
                     seat_status = s["status"]
         assert seat_status == "AVAILABLE"
 
-        # 5. User 2 can now book the same seat successfully
+        
         resp2 = await client.post(
             "/v1/bookings",
             json={

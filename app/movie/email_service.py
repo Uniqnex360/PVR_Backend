@@ -113,3 +113,17 @@ class ResendEmailService(IEmailService):
                 logger.info("Email sent via Resend to %s", to_email)
             except Exception as e:
                 logger.error("Resend API Error: %s", e)
+
+class ConsoleEmailService(IEmailService):
+    """Fallback in-memory/console logger for testing."""
+
+    def __init__(self, web_base_url: str = "http://localhost:5173") -> None:
+        self.web_base_url = web_base_url
+        self.sent_emails: list[dict] = []
+
+    async def send_booking_confirmation(
+        self, to_email: str, booking: BookingDTO
+    ) -> None:
+        ticket_url = f"{self.web_base_url}/ticket?ref={booking.ref_code}"
+        self.sent_emails.append({"to": to_email, "ref": booking.ref_code})
+        print(f"\n--- [CONSOLE EMAIL] To: {to_email} | Ticket: {ticket_url} ---\n")

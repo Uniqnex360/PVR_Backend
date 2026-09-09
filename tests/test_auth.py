@@ -1,9 +1,4 @@
-"""
-Phase 2 Acceptance Tests — T9 through T11.
 
-Run:
-    pytest tests/test_auth.py -v
-"""
 
 from __future__ import annotations
 
@@ -21,7 +16,6 @@ def anyio_backend():
 
 @pytest.mark.asyncio
 async def test_t9_register_login_me(session):
-    """T9: register -> token -> /me returns the same user."""
     app.dependency_overrides[get_session] = lambda: session
 
     async with AsyncClient(
@@ -64,7 +58,6 @@ async def test_t9_register_login_me(session):
 
 @pytest.mark.asyncio
 async def test_t10_duplicate_register_conflict(session):
-    """T10: second register with the same email -> 409, not 500."""
     app.dependency_overrides[get_session] = lambda: session
 
     async with AsyncClient(
@@ -88,7 +81,6 @@ async def test_t10_duplicate_register_conflict(session):
 
 @pytest.mark.asyncio
 async def test_t11_invalid_tokens_unauthorized(session):
-    """T11: expired/garbage token -> 401, and /v1/auth/me without token -> 401."""
     app.dependency_overrides[get_session] = lambda: session
 
     async with AsyncClient(

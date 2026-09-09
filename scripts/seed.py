@@ -1,8 +1,3 @@
-#!/usr/bin/env python3
-"""
-Idempotent seed for the PVR demo database.
-Seeds two screens, two movies, and six showtimes.
-"""
 
 from __future__ import annotations
 
@@ -12,15 +7,15 @@ from datetime import datetime, time
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
-# Ensure app is importable from the repo root or backend/.
+
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from passlib.context import CryptContext  # noqa: E402
-from sqlalchemy import create_engine, func, select  # noqa: E402
-from sqlalchemy.orm import Session  # noqa: E402
+from passlib.context import CryptContext  
+from sqlalchemy import create_engine, func, select  
+from sqlalchemy.orm import Session  
 
-from app.core.config import settings  # noqa: E402
-from app.movie.models import (  # noqa: E402
+from app.core.config import settings  
+from app.movie.models import (  
     Cinema,
     Movie,
     Screen,
@@ -32,7 +27,7 @@ from app.movie.models import (  # noqa: E402
 
 pwd = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
-# (label, seat_count, price_cents) -> sums to exactly 234 seats per screen
+
 ROW_CONFIGS: list[tuple[str, int, int]] = [
     ("A", 20, 19_000),
     ("B", 20, 19_000),
@@ -59,7 +54,7 @@ def seed(db_url: str | None = None) -> None:
     engine = create_engine(url)
 
     with Session(engine) as s:
-        # ---- user ----
+        
         user = s.execute(
             select(User).where(User.email == "demo@pvr.local")
         ).scalar_one_or_none()
@@ -73,7 +68,7 @@ def seed(db_url: str | None = None) -> None:
             s.add(user)
             s.flush()
 
-        # ---- cinema ----
+        
         cinema = s.execute(
             select(Cinema).where(Cinema.name == "PVR Lulu Mall")
         ).scalar_one_or_none()
@@ -87,7 +82,7 @@ def seed(db_url: str | None = None) -> None:
             s.add(cinema)
             s.flush()
 
-        # ---- screens & seats ----
+        
         screens_dict = {}
         for screen_name in ["Screen 1", "Screen 2"]:
             scr = s.execute(
@@ -104,7 +99,7 @@ def seed(db_url: str | None = None) -> None:
                 s.flush()
             screens_dict[screen_name] = scr
 
-            # Build rows & seats for this screen
+            
             for label, seat_count, price_cents in ROW_CONFIGS:
                 row = s.execute(
                     select(ScreenRow).where(
@@ -140,8 +135,8 @@ def seed(db_url: str | None = None) -> None:
                         )
                     s.flush()
 
-        # ---- movies ----
-        # Movie 1
+        
+        
         m1 = s.execute(
             select(Movie).where(Movie.title == "I Am Game")
         ).scalar_one_or_none()
@@ -157,7 +152,7 @@ def seed(db_url: str | None = None) -> None:
             s.add(m1)
             s.flush()
 
-        # Movie 2
+        
         m2 = s.execute(
             select(Movie).where(Movie.title == "The Final Whistle")
         ).scalar_one_or_none()
@@ -173,11 +168,11 @@ def seed(db_url: str | None = None) -> None:
             s.add(m2)
             s.flush()
 
-        # ---- showtimes ----
+        
         tz = ZoneInfo(cinema.timezone)
         today = datetime.now(tz).date()
 
-        # Movie 1 -> Screen 1
+        
         for t in MOVIE_1_TIMES:
             local_dt = datetime.combine(today, t, tzinfo=tz)
             utc_dt = local_dt.astimezone(ZoneInfo("UTC"))
@@ -197,7 +192,7 @@ def seed(db_url: str | None = None) -> None:
                     )
                 )
 
-        # Movie 2 -> Screen 2
+        
         for t in MOVIE_2_TIMES:
             local_dt = datetime.combine(today, t, tzinfo=tz)
             utc_dt = local_dt.astimezone(ZoneInfo("UTC"))

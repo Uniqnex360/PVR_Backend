@@ -1,8 +1,4 @@
-"""
-Shared fixtures for the PVR test suite.
 
-Parameterised over SQLite (always) and Postgres (when TEST_DATABASE_URL is set).
-"""
 
 from __future__ import annotations
 
@@ -10,7 +6,7 @@ import os
 import sys
 from pathlib import Path
 
-# Add backend root to sys.path
+
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 import pytest
@@ -23,11 +19,11 @@ from sqlalchemy.ext.asyncio import (
 from sqlalchemy.pool import StaticPool
 
 from app.core.database import Base
-from app.movie.models import *  # noqa: F401, F403 — register all models
+from app.movie.models import *  
 
 
 def _db_urls() -> list[str]:
-    urls = ["sqlite+aiosqlite://"]  # in-memory with StaticPool
+    urls = ["sqlite+aiosqlite://"]  
     pg = os.getenv("TEST_DATABASE_URL")
     if pg:
         urls.append(pg)
@@ -38,7 +34,6 @@ def _db_urls() -> list[str]:
     params=_db_urls(), ids=lambda u: u.split("+")[0]
 )
 async def session_factory(request):
-    """Create test engine and return async sessionmaker."""
     url = request.param
     engine_kwargs = {"echo": False}
     if "sqlite" in url:
@@ -62,6 +57,5 @@ async def session_factory(request):
 
 @pytest_asyncio.fixture
 async def session(session_factory):
-    """Yield a fresh AsyncSession for direct seed/query in tests."""
     async with session_factory() as sess:
         yield sess
