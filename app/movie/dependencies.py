@@ -7,15 +7,15 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
 from app.core.database import get_session
-from app.movie.email_service import ConsoleEmailService, SMTPEmailService
+from app.movie.email_service import ConsoleEmailService, ResendEmailService
 from app.movie.interfaces import IEmailService
 from app.movie.repository import MovieRepository
 from app.movie.services import MovieService
 
 
 def get_email_service() -> IEmailService:
-    if settings.SMTP_USER and settings.SMTP_PASSWORD:
-        return SMTPEmailService()
+    if settings.SMTP_USER and settings.RESEND_API_KEY:
+        return ResendEmailService()
     return ConsoleEmailService()
 
 
