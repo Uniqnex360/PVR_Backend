@@ -9,7 +9,7 @@ class Settings(BaseSettings):
     SMTP_USER: str | None = None          # your-email@gmail.com
     SMTP_PASSWORD: str | None = None      # 16-character App Password
     SMTP_FROM_NAME: str = "PVR Cinemas"
-    FRONTEND_URL: str = "http://localhost:5173"
+    FRONTEND_URL: str = "http://localhost:3000"
     model_config = {"env_file": ".env", "env_file_encoding": "utf-8"}
 
 

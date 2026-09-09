@@ -146,13 +146,13 @@ def test_t1_migration_and_seed(tmp_path):
     with eng.connect() as conn:
         assert (
             conn.execute(text("SELECT COUNT(*) FROM seats")).scalar()
-            == 234
+            == 468
         )
         assert (
             conn.execute(
                 text("SELECT COUNT(*) FROM showtimes")
             ).scalar()
-            == 3
+            == 6
         )
     eng.dispose()
 
@@ -359,7 +359,7 @@ def test_t6_seed_idempotent(tmp_path):
     with eng.connect() as conn:
         assert (
             conn.execute(text("SELECT COUNT(*) FROM seats")).scalar()
-            == 234
+            == 468
         )
         assert (
             conn.execute(text("SELECT COUNT(*) FROM users")).scalar()

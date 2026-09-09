@@ -1,14 +1,7 @@
 #!/usr/bin/env python3
 """
 Idempotent seed for the PVR demo database.
-
-Safe to run 50 times — uses natural-key lookups, not "insert and pray".
-Showtimes are relative to today so the demo never shows yesterday's
-sold-out 6 pm slot.
-
-Usage:
-    python scripts/seed.py                  # uses DATABASE_URL from .env
-    python scripts/seed.py <database_url>   # explicit override (for tests)
+Seeds two screens, two movies, and six showtimes.
 """
 
 from __future__ import annotations
@@ -39,6 +32,7 @@ from app.movie.models import (  # noqa: E402
 
 pwd = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
+# (label, seat_count, price_cents) -> sums to exactly 234 seats per screen
 ROW_CONFIGS: list[tuple[str, int, int]] = [
     ("A", 20, 19_000),
     ("B", 20, 19_000),
@@ -51,14 +45,13 @@ ROW_CONFIGS: list[tuple[str, int, int]] = [
     ("I", 28, 39_000),
     ("J", 28, 39_000),
 ]
-SHOWTIME_TIMES = [time(15, 30), time(19, 0), time(22, 15)]
+
+MOVIE_1_TIMES = [time(15, 30), time(19, 0), time(22, 15)]
+MOVIE_2_TIMES = [time(14, 0), time(17, 30), time(21, 0)]
 
 
 def _to_sync_url(async_url: str) -> str:
-    return (
-        async_url.replace("+aiosqlite", "")
-        .replace("+asyncpg", "")
-    )
+    return async_url.replace("+aiosqlite", "").replace("+asyncpg", "")
 
 
 def seed(db_url: str | None = None) -> None:
@@ -94,107 +87,141 @@ def seed(db_url: str | None = None) -> None:
             s.add(cinema)
             s.flush()
 
-        # ---- screen ----
-        screen = s.execute(
-            select(Screen).where(
-                Screen.cinema_id == cinema.id,
-                Screen.name == "Screen 1",
-            )
-        ).scalar_one_or_none()
-        if not screen:
-            screen = Screen(
-                id=uuid.uuid4(),
-                cinema_id=cinema.id,
-                name="Screen 1",
-            )
-            s.add(screen)
-            s.flush()
-
-        # ---- rows + seats ----
-        for label, seat_count, price_cents in ROW_CONFIGS:
-            row = s.execute(
-                select(ScreenRow).where(
-                    ScreenRow.screen_id == screen.id,
-                    ScreenRow.label == label,
+        # ---- screens & seats ----
+        screens_dict = {}
+        for screen_name in ["Screen 1", "Screen 2"]:
+            scr = s.execute(
+                select(Screen).where(
+                    Screen.cinema_id == cinema.id,
+                    Screen.name == screen_name,
                 )
             ).scalar_one_or_none()
-            if not row:
-                row = ScreenRow(
-                    id=uuid.uuid4(),
-                    screen_id=screen.id,
-                    label=label,
-                    seat_count=seat_count,
-                    price_cents=price_cents,
+            if not scr:
+                scr = Screen(
+                    id=uuid.uuid4(), cinema_id=cinema.id, name=screen_name
                 )
-                s.add(row)
+                s.add(scr)
                 s.flush()
+            screens_dict[screen_name] = scr
 
-            existing = s.execute(
-                select(func.count())
-                .select_from(Seat)
-                .where(Seat.row_id == row.id)
-            ).scalar()
-            if existing == 0:
-                for num in range(1, seat_count + 1):
-                    s.add(
-                        Seat(
-                            id=uuid.uuid4(),
-                            row_id=row.id,
-                            number=num,
-                            code=f"{label}{num:02d}",
-                        )
+            # Build rows & seats for this screen
+            for label, seat_count, price_cents in ROW_CONFIGS:
+                row = s.execute(
+                    select(ScreenRow).where(
+                        ScreenRow.screen_id == scr.id,
+                        ScreenRow.label == label,
                     )
-                s.flush()
+                ).scalar_one_or_none()
+                if not row:
+                    row = ScreenRow(
+                        id=uuid.uuid4(),
+                        screen_id=scr.id,
+                        label=label,
+                        seat_count=seat_count,
+                        price_cents=price_cents,
+                    )
+                    s.add(row)
+                    s.flush()
 
-        # ---- movie ----
-        movie = s.execute(
-            select(Movie).where(Movie.title == "I am Game")
+                existing_seats = s.execute(
+                    select(func.count())
+                    .select_from(Seat)
+                    .where(Seat.row_id == row.id)
+                ).scalar()
+                if existing_seats == 0:
+                    for num in range(1, seat_count + 1):
+                        s.add(
+                            Seat(
+                                id=uuid.uuid4(),
+                                row_id=row.id,
+                                number=num,
+                                code=f"{label}{num:02d}",
+                            )
+                        )
+                    s.flush()
+
+        # ---- movies ----
+        # Movie 1
+        m1 = s.execute(
+            select(Movie).where(Movie.title == "I Am Game")
         ).scalar_one_or_none()
-        if not movie:
-            movie = Movie(
+        if not m1:
+            m1 = Movie(
                 id=uuid.uuid4(),
-                title="I am Game",
+                title="I Am Game",
                 duration_min=162,
                 language="Malayalam",
                 certificate="UA",
                 release_year=2025,
             )
-            s.add(movie)
+            s.add(m1)
             s.flush()
 
-        # ---- showtimes (relative to today in cinema tz) ----
+        # Movie 2
+        m2 = s.execute(
+            select(Movie).where(Movie.title == "The Final Whistle")
+        ).scalar_one_or_none()
+        if not m2:
+            m2 = Movie(
+                id=uuid.uuid4(),
+                title="The Final Whistle",
+                duration_min=120,
+                language="English",
+                certificate="UA",
+                release_year=2025,
+            )
+            s.add(m2)
+            s.flush()
+
+        # ---- showtimes ----
         tz = ZoneInfo(cinema.timezone)
         today = datetime.now(tz).date()
-        showtime_ids: list[str] = []
 
-        for t in SHOWTIME_TIMES:
+        # Movie 1 -> Screen 1
+        for t in MOVIE_1_TIMES:
             local_dt = datetime.combine(today, t, tzinfo=tz)
             utc_dt = local_dt.astimezone(ZoneInfo("UTC"))
-
             st = s.execute(
                 select(Showtime).where(
-                    Showtime.screen_id == screen.id,
+                    Showtime.screen_id == screens_dict["Screen 1"].id,
                     Showtime.starts_at == utc_dt,
                 )
             ).scalar_one_or_none()
             if not st:
-                st = Showtime(
-                    id=uuid.uuid4(),
-                    screen_id=screen.id,
-                    movie_id=movie.id,
-                    starts_at=utc_dt,
+                s.add(
+                    Showtime(
+                        id=uuid.uuid4(),
+                        screen_id=screens_dict["Screen 1"].id,
+                        movie_id=m1.id,
+                        starts_at=utc_dt,
+                    )
                 )
-                s.add(st)
-                s.flush()
-            showtime_ids.append(str(st.id))
+
+        # Movie 2 -> Screen 2
+        for t in MOVIE_2_TIMES:
+            local_dt = datetime.combine(today, t, tzinfo=tz)
+            utc_dt = local_dt.astimezone(ZoneInfo("UTC"))
+            st = s.execute(
+                select(Showtime).where(
+                    Showtime.screen_id == screens_dict["Screen 2"].id,
+                    Showtime.starts_at == utc_dt,
+                )
+            ).scalar_one_or_none()
+            if not st:
+                s.add(
+                    Showtime(
+                        id=uuid.uuid4(),
+                        screen_id=screens_dict["Screen 2"].id,
+                        movie_id=m2.id,
+                        starts_at=utc_dt,
+                    )
+                )
 
         s.commit()
 
     print(
-        "Seeded: 1 user, 1 cinema, 1 screen, 10 rows, "
-        "234 seats, 1 movie, 3 showtimes"
+        "Seeded successfully: 2 Screens, 468 Seats total, 2 Movies, 6 Showtimes."
     )
-    print(f"Showtime IDs: {', '.join(showtime_ids)}")
 
 
 if __name__ == "__main__":

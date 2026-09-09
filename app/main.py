@@ -14,8 +14,8 @@ app = FastAPI(title="PVR Demo API", version="0.1.0")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
-        "http://localhost:5173",
-        "http://127.0.0.1:5173",
+        "http://localhost:3000",
+        "http://127.0.0.1:3000",
         "http://localhost:3000",
         "*",  # adjust in production if needed
     ],

@@ -71,7 +71,7 @@ class SMTPEmailService(IEmailService):
 <body>
   <div class="ticket-card">
     <div class="ticket-header">
-      <h1>PVR CINEMAS</h1>
+      <h1>CHENNAI CINEMAS</h1>
       <div class="ticket-ref">BOOKING CONFIRMED: {booking.ref_code}</div>
     </div>
     <div class="ticket-body">
@@ -154,7 +154,7 @@ class SMTPEmailService(IEmailService):
 class ConsoleEmailService(IEmailService):
     """Fallback console email implementation for dev/testing."""
 
-    def __init__(self, web_base_url: str = "http://localhost:5173") -> None:
+    def __init__(self, web_base_url: str = "http://localhost:3000") -> None:
         self.web_base_url = web_base_url
         self.sent_emails: list[dict] = []
 
