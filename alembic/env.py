@@ -1,4 +1,5 @@
 
+
 import asyncio
 import os
 import sys
@@ -24,7 +25,14 @@ if config.config_file_name is not None:
 
 
 if getattr(settings, "DATABASE_URL", None):
-    config.set_main_option("sqlalchemy.url", settings.DATABASE_URL)
+    raw_url = settings.DATABASE_URL
+    if raw_url.startswith("postgres://"):
+        raw_url = raw_url.replace("postgres://", "postgresql+asyncpg://", 1)
+    elif raw_url.startswith("postgresql://") and not raw_url.startswith("postgresql+asyncpg://"):
+        raw_url = raw_url.replace("postgresql://", "postgresql+asyncpg://", 1)
+    if "sslmode=" in raw_url:
+        raw_url = raw_url.replace("sslmode=", "ssl=")
+    config.set_main_option("sqlalchemy.url", raw_url)
 
 target_metadata = Base.metadata
 
