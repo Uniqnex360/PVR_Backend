@@ -12,14 +12,14 @@ logger = logging.getLogger(__name__)
 class ResendEmailService(IEmailService):
     def __init__(
         self,
-        api_key: str | None = getattr(settings, "RESEND_API_KEY", None),
-        from_email: str | None = getattr(settings, "RESEND_FROM_EMAIL", None) or getattr(settings, "SMTP_USER", None),
-        from_name: str = getattr(settings, "SMTP_FROM_NAME", "PVR Cinemas"),
-        frontend_url: str = getattr(settings, "FRONTEND_URL", "http://localhost:5173"),
+        api_key: str | None = settings.RESEND_API_KEY,
+        from_email: str | None = settings.RESEND_FROM_EMAIL or settings.SMTP_USER,
+        from_name: str = settings.SMTP_FROM_NAME,
+        frontend_url: str = settings.FRONTEND_URL,
     ) -> None:
         self.api_key = api_key
-        clean_email = from_email if from_email else "onboarding@resend.dev"
-        self.from_sender = f"{from_name} <{clean_email}>"
+        sender = from_email if from_email else "tickets@datavioai.com"
+        self.from_sender = f"{from_name} <{sender}>"
         self.frontend_url = frontend_url
         self.api_url = "https://api.resend.com/emails"
 
@@ -126,7 +126,6 @@ class ResendEmailService(IEmailService):
 
 
 class ConsoleEmailService(IEmailService):
-
     def __init__(self, web_base_url: str = "http://localhost:5173") -> None:
         self.web_base_url = web_base_url
         self.sent_emails: list[dict] = []
