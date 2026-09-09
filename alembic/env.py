@@ -1,4 +1,7 @@
-
+"""
+Async Alembic environment.
+Dynamically uses settings.DATABASE_URL in production with asyncpg sanitization.
+"""
 
 import asyncio
 import os
@@ -9,30 +12,25 @@ from alembic import context
 from sqlalchemy import pool
 from sqlalchemy.ext.asyncio import async_engine_from_config
 
-
+# Ensure the backend root is importable regardless of cwd
 sys.path.insert(
     0, os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 )
 
-from app.core.config import settings  
-from app.core.database import Base  
-from app.movie.models import *  
+from app.core.config import settings  # noqa: E402
+from app.core.database import Base, clean_async_db_url  # noqa: E402
+from app.movie.models import *  # noqa: E402, F401, F403
 
 config = context.config
 
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
-
+# Inject sanitized environment DATABASE_URL into alembic config
 if getattr(settings, "DATABASE_URL", None):
-    raw_url = settings.DATABASE_URL
-    if raw_url.startswith("postgres://"):
-        raw_url = raw_url.replace("postgres://", "postgresql+asyncpg://", 1)
-    elif raw_url.startswith("postgresql://") and not raw_url.startswith("postgresql+asyncpg://"):
-        raw_url = raw_url.replace("postgresql://", "postgresql+asyncpg://", 1)
-    if "sslmode=" in raw_url:
-        raw_url = raw_url.replace("sslmode=", "ssl=")
-    config.set_main_option("sqlalchemy.url", raw_url)
+    config.set_main_option(
+        "sqlalchemy.url", clean_async_db_url(settings.DATABASE_URL)
+    )
 
 target_metadata = Base.metadata
 
