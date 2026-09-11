@@ -1,5 +1,5 @@
 """
-FastAPI routes for Movie, Showtimes, Bookings, and Public Tickets.
+FastAPI routes for Movie, Showtimes, Bookings, Holds, and Public Tickets.
 Mounted with prefix /v1 via app.include_router(movie_router, prefix="/v1").
 """
 
@@ -8,7 +8,7 @@ from __future__ import annotations
 from datetime import date
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, Query, status
+from fastapi import APIRouter, Depends, Query, Response, status
 
 from app.auth.dependencies import get_current_user
 from app.auth.interfaces import UserDTO
@@ -17,8 +17,12 @@ from app.movie.exceptions import (
     BookingAlreadyCancelledHTTPError,
     BookingForbiddenHTTPError,
     BookingNotFoundHTTPError,
+    HoldAlreadyCommittedHTTPError,
+    HoldExpiredHTTPError,
+    HoldNotFoundHTTPError,
     InvalidSeatSelectionHTTPError,
     SeatConflictHTTPError,
+    SeatUnavailableHTTPError,
     ShowtimeNotFoundHTTPError,
     TicketNotFoundHTTPError,
 )
@@ -27,15 +31,25 @@ from app.movie.interfaces import (
     BookingDTO,
     BookingNotFoundError,
     BookingOwnershipError,
+    HoldAlreadyCommittedError,
+    HoldDTO,
+    HoldExpiredError,
+    HoldNotFoundError,
     InvalidSeatSelectionError,
     SeatAlreadyBookedError,
+    SeatUnavailableError,
     ShowtimeNotFoundError,
     TicketNotFoundError,
 )
 from app.movie.schemas import (
     BookingResponse,
     BookingSeatResponse,
+    CommitHoldRequest,
     CreateBookingRequest,
+    CreateHoldRequest,
+    HoldDetailResponse,
+    HoldResponse,
+    HoldSeatResponse,
     RowResponse,
     SeatMapResponse,
     SeatResponse,
@@ -50,6 +64,7 @@ movie_router = APIRouter(tags=["movie"])
 def _dto_to_booking_response(dto: BookingDTO) -> BookingResponse:
     return BookingResponse(
         id=dto.id,
+        booking_id=dto.id,
         user_id=dto.user_id,
         showtime_id=dto.showtime_id,
         movie_title=dto.movie_title,
@@ -68,6 +83,24 @@ def _dto_to_booking_response(dto: BookingDTO) -> BookingResponse:
             for s in dto.seats
         ],
         total_price_cents=dto.total_price_cents,
+        barcode=dto.barcode or f"BARCODE-{dto.ref_code}",
+    )
+
+
+def _dto_to_hold_response(dto: HoldDTO) -> HoldResponse:
+    return HoldResponse(
+        hold_id=dto.id,
+        expires_at=dto.expires_at,
+        seats=[
+            HoldSeatResponse(
+                seat_id=s.seat_id,
+                code=s.code,
+                price_cents=s.price_cents,
+            )
+            for s in dto.seats
+        ],
+        total=dto.quote_total,
+        currency=dto.currency,
     )
 
 
@@ -129,6 +162,110 @@ async def get_seat_map(
         )
     except ShowtimeNotFoundError as exc:
         raise ShowtimeNotFoundHTTPError(str(exc))
+
+
+# ---------------------------------------------------------------------------
+# Holds Endpoints
+# ---------------------------------------------------------------------------
+
+@movie_router.post(
+    "/holds",
+    response_model=HoldResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+async def create_hold(
+    body: CreateHoldRequest,
+    current_user: UserDTO = Depends(get_current_user),
+    movie_service: MovieService = Depends(get_movie_service),
+):
+    try:
+        hold = await movie_service.create_hold(
+            partner_id=current_user.id,
+            showtime_id=body.showtime_id,
+            seat_ids=body.seat_ids,
+            idempotency_key=body.idempotency_key,
+            end_user_ref=body.end_user_ref,
+        )
+        return _dto_to_hold_response(hold)
+    except SeatUnavailableError as exc:
+        raise SeatUnavailableHTTPError(exc.unavailable_seat_ids)
+    except ShowtimeNotFoundError as exc:
+        raise ShowtimeNotFoundHTTPError(str(exc))
+    except InvalidSeatSelectionError as exc:
+        raise InvalidSeatSelectionHTTPError(str(exc))
+
+
+@movie_router.post(
+    "/holds/{hold_id}/commit",
+    response_model=BookingResponse,
+    status_code=status.HTTP_200_OK,
+)
+async def commit_hold(
+    hold_id: UUID,
+    body: CommitHoldRequest | None = None,
+    current_user: UserDTO = Depends(get_current_user),
+    movie_service: MovieService = Depends(get_movie_service),
+):
+    payment_ref = body.payment_ref if body else None
+    try:
+        booking = await movie_service.commit_hold(
+            hold_id=hold_id, payment_ref=payment_ref
+        )
+        return _dto_to_booking_response(booking)
+    except HoldAlreadyCommittedError as exc:
+        raise HoldAlreadyCommittedHTTPError(_dto_to_booking_response(exc.booking).model_dump(mode="json"))
+    except HoldExpiredError as exc:
+        raise HoldExpiredHTTPError(str(exc))
+    except HoldNotFoundError as exc:
+        raise HoldNotFoundHTTPError(str(exc))
+    except SeatAlreadyBookedError as exc:
+        raise SeatConflictHTTPError(str(exc))
+
+
+@movie_router.delete(
+    "/holds/{hold_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+)
+async def delete_hold(
+    hold_id: UUID,
+    current_user: UserDTO = Depends(get_current_user),
+    movie_service: MovieService = Depends(get_movie_service),
+):
+    await movie_service.release_hold(hold_id)
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+@movie_router.get(
+    "/holds/{hold_id}",
+    response_model=HoldDetailResponse,
+)
+async def get_hold(
+    hold_id: UUID,
+    current_user: UserDTO = Depends(get_current_user),
+    movie_service: MovieService = Depends(get_movie_service),
+):
+    try:
+        dto = await movie_service.get_hold(hold_id)
+        return HoldDetailResponse(
+            hold_id=dto.id,
+            showtime_id=dto.showtime_id,
+            status=dto.status,
+            expires_at=dto.expires_at,
+            quote_total=dto.quote_total,
+            currency=dto.currency,
+            seats=[
+                HoldSeatResponse(
+                    seat_id=s.seat_id,
+                    code=s.code,
+                    price_cents=s.price_cents,
+                )
+                for s in dto.seats
+            ],
+            created_at=dto.created_at,
+            updated_at=dto.updated_at,
+        )
+    except HoldNotFoundError as exc:
+        raise HoldNotFoundHTTPError(str(exc))
 
 
 # ---------------------------------------------------------------------------

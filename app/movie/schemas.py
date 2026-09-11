@@ -74,6 +74,49 @@ class BookingResponse(BaseModel):
     created_at: datetime
     seats: list[BookingSeatResponse]
     total_price_cents: int
+    barcode: str | None = None
+    booking_id: UUID | None = None
+
+
+# ---------------------------------------------------------------------------
+# Hold Requests / Responses
+# ---------------------------------------------------------------------------
+
+class CreateHoldRequest(BaseModel):
+    showtime_id: UUID
+    seat_ids: list[UUID] = Field(min_length=1)
+    idempotency_key: str = Field(min_length=1, max_length=128)
+    end_user_ref: str | None = Field(default=None, max_length=128)
+
+
+class HoldSeatResponse(BaseModel):
+    seat_id: UUID
+    code: str
+    price_cents: int
+
+
+class HoldResponse(BaseModel):
+    hold_id: UUID
+    expires_at: datetime
+    seats: list[HoldSeatResponse]
+    total: int
+    currency: str
+
+
+class HoldDetailResponse(BaseModel):
+    hold_id: UUID
+    showtime_id: UUID
+    status: str
+    expires_at: datetime
+    quote_total: int
+    currency: str
+    seats: list[HoldSeatResponse]
+    created_at: datetime
+    updated_at: datetime
+
+
+class CommitHoldRequest(BaseModel):
+    payment_ref: str | None = None
 
 
 # ---------------------------------------------------------------------------

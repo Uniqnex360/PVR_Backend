@@ -28,6 +28,13 @@ class SeatStatus(str, enum.Enum):
     BOOKED = "BOOKED"
 
 
+class HoldStatus(str, enum.Enum):
+    ACTIVE = "ACTIVE"
+    COMMITTED = "COMMITTED"
+    EXPIRED = "EXPIRED"
+    RELEASED = "RELEASED"
+
+
 @dataclass(frozen=True, slots=True)
 class SeatProjectionDTO:
     id: UUID
@@ -88,6 +95,30 @@ class BookingDTO:
     created_at: datetime
     seats: list[BookingSeatDTO]
     total_price_cents: int
+    barcode: str | None = None
+
+
+@dataclass(frozen=True, slots=True)
+class HoldSeatDTO:
+    seat_id: UUID
+    code: str
+    price_cents: int
+
+
+@dataclass(frozen=True, slots=True)
+class HoldDTO:
+    id: UUID
+    showtime_id: UUID
+    partner_id: UUID
+    end_user_ref: str | None
+    status: str
+    idempotency_key: str
+    quote_total: int
+    currency: str
+    expires_at: datetime
+    created_at: datetime
+    updated_at: datetime
+    seats: list[HoldSeatDTO]
 
 
 # ---------------------------------------------------------------------------
@@ -100,6 +131,32 @@ class ShowtimeNotFoundError(NotFoundError):
 
 class SeatAlreadyBookedError(ConflictError):
     """One or more requested seats are already booked for this showtime."""
+
+
+class SeatUnavailableError(ConflictError):
+    """One or more requested seats are unavailable (booked or active hold)."""
+
+    def __init__(self, unavailable_seat_ids: list[UUID]) -> None:
+        super().__init__(
+            f"Seats unavailable: {', '.join(str(s) for s in unavailable_seat_ids)}"
+        )
+        self.unavailable_seat_ids = unavailable_seat_ids
+
+
+class HoldNotFoundError(NotFoundError):
+    """Hold does not exist."""
+
+
+class HoldExpiredError(DomainError):
+    """Hold is expired or released."""
+
+
+class HoldAlreadyCommittedError(ConflictError):
+    """Hold was already committed into a booking."""
+
+    def __init__(self, booking: BookingDTO) -> None:
+        super().__init__("Hold already committed")
+        self.booking = booking
 
 
 class InvalidSeatSelectionError(DomainError):
@@ -160,6 +217,33 @@ class IMovieRepository(Protocol):
     async def cancel_booking(
         self, *, user_id: UUID, booking_id: UUID
     ) -> BookingDTO: ...
+
+    async def create_hold(
+        self,
+        *,
+        partner_id: UUID,
+        showtime_id: UUID,
+        seat_ids: list[UUID],
+        idempotency_key: str,
+        end_user_ref: str | None = None,
+        ttl_seconds: int = 600,
+    ) -> HoldDTO: ...
+
+    async def get_hold_by_id(
+        self, hold_id: UUID
+    ) -> HoldDTO | None: ...
+
+    async def commit_hold(
+        self, *, hold_id: UUID, payment_ref: str | None = None
+    ) -> BookingDTO: ...
+
+    async def release_hold(
+        self, hold_id: UUID
+    ) -> None: ...
+
+    async def release_expired_holds(
+        self
+    ) -> list[UUID]: ...
 
 
 # ---------------------------------------------------------------------------

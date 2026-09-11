@@ -1,6 +1,3 @@
-"""
-All SQLAlchemy models for Movie, Cinema, Screen, Seats, and Bookings.
-"""
 
 from __future__ import annotations
 
@@ -20,12 +17,86 @@ from sqlalchemy import (
 
 from app.core.database import Base
 from app.shared.timeutil import TZDateTime, utcnow
-from app.auth.models import User  # Re-export / foreign key reference
+from app.auth.models import User  
+class HoldStatus(str, enum.Enum):
+    ACTIVE = "ACTIVE"
+    COMMITTED = "COMMITTED"
+    EXPIRED = "EXPIRED"
+    RELEASED = "RELEASED"
 
 
-# ---------------------------------------------------------------------------
-# Enums
-# ---------------------------------------------------------------------------
+class Hold(Base):
+    __tablename__ = "holds"
+
+    id = Column(sa.Uuid, primary_key=True, default=uuid.uuid4)
+    showtime_id = Column(
+        sa.Uuid,
+        ForeignKey("showtimes.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    partner_id = Column(sa.Uuid, ForeignKey("users.id"), nullable=False)
+    end_user_ref = Column(String, nullable=True)
+    status = Column(
+        String, nullable=False, server_default=sa.text("'ACTIVE'")
+    )
+    idempotency_key = Column(String, nullable=False)
+    quote_total = Column(Integer, nullable=False)
+    currency = Column(
+        String, nullable=False, server_default=sa.text("'INR'")
+    )
+    expires_at = Column(TZDateTime, nullable=False)
+    created_at = Column(
+        TZDateTime,
+        nullable=False,
+        default=utcnow,
+        server_default=sa.text("CURRENT_TIMESTAMP"),
+    )
+    updated_at = Column(
+        TZDateTime,
+        nullable=False,
+        default=utcnow,
+        onupdate=utcnow,
+        server_default=sa.text("CURRENT_TIMESTAMP"),
+    )
+
+    __table_args__ = (
+        UniqueConstraint(
+            "partner_id",
+            "end_user_ref",
+            "idempotency_key",
+            name="uq_hold_partner_enduser_idempotency",
+        ),
+        Index(
+            "ix_holds_showtime_status_expires",
+            "showtime_id",
+            "status",
+            "expires_at",
+        ),
+    )
+class HoldSeat(Base):
+    __tablename__ = "hold_seats"
+
+    hold_id = Column(
+        sa.Uuid,
+        ForeignKey("holds.id", ondelete="CASCADE"),
+        primary_key=True,
+    )
+    seat_id = Column(
+        sa.Uuid, ForeignKey("seats.id"), primary_key=True
+    )
+    showtime_id = Column(
+        sa.Uuid, ForeignKey("showtimes.id"), nullable=False
+    )
+    price_cents = Column(Integer, nullable=False)
+
+    __table_args__ = (
+        Index(
+            "ux_hold_showtime_seat",
+            "showtime_id",
+            "seat_id",
+            unique=True,
+        ),
+    )
 
 class BookingStatus(str, enum.Enum):
     PENDING = "PENDING"
@@ -33,9 +104,9 @@ class BookingStatus(str, enum.Enum):
     CANCELLED = "CANCELLED"
 
 
-# ---------------------------------------------------------------------------
-# Cinema / Screen / Seats
-# ---------------------------------------------------------------------------
+
+
+
 
 class Cinema(Base):
     __tablename__ = "cinemas"
@@ -96,9 +167,9 @@ class Seat(Base):
     )
 
 
-# ---------------------------------------------------------------------------
-# Movie / Showtime
-# ---------------------------------------------------------------------------
+
+
+
 
 class Movie(Base):
     __tablename__ = "movies"
@@ -125,9 +196,9 @@ class Showtime(Base):
     created_by_partner_id = Column(sa.Uuid, nullable=True)
 
 
-# ---------------------------------------------------------------------------
-# Booking
-# ---------------------------------------------------------------------------
+
+
+
 
 class Booking(Base):
     __tablename__ = "bookings"

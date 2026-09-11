@@ -134,5 +134,12 @@ class ConsoleEmailService(IEmailService):
         self, to_email: str, booking: BookingDTO
     ) -> None:
         ticket_url = f"{self.web_base_url}/ticket?ref={booking.ref_code}"
-        self.sent_emails.append({"to": to_email, "ref": booking.ref_code})
+        self.sent_emails.append(
+            {
+                "to": to_email,
+                "ref": booking.ref_code,
+                "ref_code": booking.ref_code,
+                "ticket_url": ticket_url,
+            }
+        )
         print(f"\n--- [CONSOLE EMAIL] To: {to_email} | Ticket: {ticket_url} ---\n")

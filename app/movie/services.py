@@ -1,5 +1,5 @@
 """
-Movie & Booking Service — pure domain logic.
+Movie, Booking & Hold Service — pure domain logic.
 
 Boundary Contract Checklist:
 - ZERO imports from fastapi or starlette
@@ -16,6 +16,7 @@ from zoneinfo import ZoneInfo
 
 from app.movie.interfaces import (
     BookingDTO,
+    HoldDTO,
     IEmailService,
     IMovieRepository,
     InvalidSeatSelectionError,
@@ -65,7 +66,6 @@ class MovieService:
         if len(seat_ids) > 10:
             raise InvalidSeatSelectionError("Cannot book more than 10 seats")
 
-        # 1. Atomic claim & commit in the database
         booking = await self._repo.create_booking(
             user_id=user_id,
             showtime_id=showtime_id,
@@ -73,7 +73,6 @@ class MovieService:
             idempotency_key=idempotency_key,
         )
 
-        # 2. Trigger email confirmation POST-COMMIT
         if self._email_service:
             await self._email_service.send_booking_confirmation(
                 to_email=user_email, booking=booking
@@ -96,3 +95,51 @@ class MovieService:
         if booking is None:
             raise TicketNotFoundError(f"Ticket '{ref_code}' not found")
         return booking
+
+    # -----------------------------------------------------------------------
+    # Holds Service Methods
+    # -----------------------------------------------------------------------
+
+    async def create_hold(
+        self,
+        *,
+        partner_id: UUID,
+        showtime_id: UUID,
+        seat_ids: list[UUID],
+        idempotency_key: str,
+        end_user_ref: str | None = None,
+        ttl_seconds: int = 600,
+    ) -> HoldDTO:
+        if not seat_ids:
+            raise InvalidSeatSelectionError("Must select at least 1 seat")
+        if len(seat_ids) != len(set(seat_ids)):
+            raise InvalidSeatSelectionError("Duplicate seats requested")
+
+        return await self._repo.create_hold(
+            partner_id=partner_id,
+            showtime_id=showtime_id,
+            seat_ids=seat_ids,
+            idempotency_key=idempotency_key,
+            end_user_ref=end_user_ref,
+            ttl_seconds=ttl_seconds,
+        )
+
+    async def get_hold(self, hold_id: UUID) -> HoldDTO:
+        hold = await self._repo.get_hold_by_id(hold_id)
+        if not hold:
+            from app.movie.interfaces import HoldNotFoundError
+            raise HoldNotFoundError(f"Hold '{hold_id}' not found")
+        return hold
+
+    async def commit_hold(
+        self, *, hold_id: UUID, payment_ref: str | None = None
+    ) -> BookingDTO:
+        return await self._repo.commit_hold(
+            hold_id=hold_id, payment_ref=payment_ref
+        )
+
+    async def release_hold(self, hold_id: UUID) -> None:
+        await self._repo.release_hold(hold_id)
+
+    async def release_expired_holds(self) -> list[UUID]:
+        return await self._repo.release_expired_holds()

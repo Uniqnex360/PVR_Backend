@@ -1,4 +1,4 @@
-
+from uuid import UUID
 from fastapi import HTTPException, status
 
 
@@ -12,9 +12,46 @@ class SeatConflictHTTPError(HTTPException):
         super().__init__(status_code=status.HTTP_409_CONFLICT, detail=detail)
 
 
+class SeatUnavailableHTTPError(HTTPException):
+    def __init__(self, seats: list[UUID]):
+        super().__init__(
+            status_code=status.HTTP_409_CONFLICT,
+            detail={
+                "code": "SEAT_UNAVAILABLE",
+                "seats": [str(s) for s in seats],
+            },
+        )
+
+
+class HoldExpiredHTTPError(HTTPException):
+    def __init__(self, detail: str = "Hold has expired"):
+        super().__init__(
+            status_code=status.HTTP_410_GONE,
+            detail={"code": "HOLD_EXPIRED", "message": detail},
+        )
+
+
+class HoldAlreadyCommittedHTTPError(HTTPException):
+    def __init__(self, booking_data: dict):
+        super().__init__(
+            status_code=status.HTTP_409_CONFLICT,
+            detail={
+                "code": "HOLD_ALREADY_COMMITTED",
+                "booking": booking_data,
+            },
+        )
+
+
+class HoldNotFoundHTTPError(HTTPException):
+    def __init__(self, detail: str = "Hold not found"):
+        super().__init__(status_code=status.HTTP_404_NOT_FOUND, detail=detail)
+
+
 class InvalidSeatSelectionHTTPError(HTTPException):
     def __init__(self, detail: str = "Invalid seat selection"):
-        super().__init__(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=detail)
+        super().__init__(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=detail
+        )
 
 
 class BookingNotFoundHTTPError(HTTPException):
