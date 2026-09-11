@@ -1,0 +1,19 @@
+
+name: Keep-Alive Ping
+
+on:
+  schedule:
+    - cron: '*/10 * * * *'
+  workflow_dispatch: 
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping PVR Backend
+        run: |
+          curl -s -f -m 30 "https://pvr-backend-pejx.onrender.com/v1/health" || echo "PVR ping failed or waking up"
+
+      - name: Ping Vybh Core Monolith
+        run: |
+          curl -s -f -m 30 "https://booking-app-backend-wp46.onrender.com/health" || echo "Vybh ping failed or waking up"
