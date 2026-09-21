@@ -353,12 +353,11 @@ async def test_a6_commit_twice_idempotent(session, session_factory):
 
     app.dependency_overrides.clear()
 
-
-# ---------------------------------------------------------------------------
-# A7: 20 concurrent holds on ONE seat from 20 distinct end_user_refs -> exactly 1 success
-# ---------------------------------------------------------------------------
 @pytest.mark.asyncio
-async def test_a7_concurrent_holds_one_seat(session_factory):
+async def test_a7_concurrent_holds_one_seat(session_factory, request):
+    if "sqlite" in request.node.callspec.id:
+        pytest.skip("Requires Postgres SELECT ... FOR UPDATE; SQLite has no row locks")
+
     async def _get_test_session():
         async with session_factory() as sess:
             yield sess
@@ -392,7 +391,6 @@ async def test_a7_concurrent_holds_one_seat(session_factory):
     assert status_codes.count(409) == 19
 
     app.dependency_overrides.clear()
-
 
 # ---------------------------------------------------------------------------
 # A8: Hold then DELETE -> seat shows available in the very next read, without running the sweep
