@@ -45,9 +45,9 @@ ROW_CONFIGS: list[tuple[str, int, int]] = [
 ]
 
 CITIES: dict[str, list[str]] = {
-    "Kochi":     ["PVR Lulu Mall", "AGS Cinemas", "Shenoys"],
-    "Chennai":   ["PVR Grand Mall", "AGS Cinemas", "Sathyam Cinemas"],
-    "Bangalore": ["PVR Forum Mall", "INOX Garuda Mall", "Cinepolis Nexus"],
+    "Kochi":     ["PVR Lulu Mall", "PVR Oberon Mall", "PVR Centre Square"],
+    "Chennai":   ["PVR Grand Mall", "PVR Marina Mall", "PVR Ampa Skywalk"],
+    "Bangalore": ["PVR Forum Mall", "PVR Orion Mall", "PVR Phoenix Mall"],
 }
 
 SCREENS_PER_CINEMA = 3

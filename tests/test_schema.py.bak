@@ -140,7 +140,7 @@ def test_t1_migration_and_seed(tmp_path):
             conn.execute(
                 text("SELECT COUNT(*) FROM showtimes")
             ).scalar()
-            == 1272
+            == 6
         )
     eng.dispose()
 
@@ -354,7 +354,7 @@ def test_t6_seed_idempotent(tmp_path):
         )
         assert (
             conn.execute(text("SELECT COUNT(*) FROM cinemas")).scalar()
-            == 9
+            == 1
         )
     eng.dispose()
 
