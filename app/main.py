@@ -21,8 +21,9 @@ app.add_middleware(
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
-)
+)   
 
+@app.head("/v1/health")
 
 @app.get("/v1/health")
 async def health():

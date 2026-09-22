@@ -60,13 +60,29 @@ config = context.config
 
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
-current_url = config.get_main_option("sqlalchemy.url")
-if current_url and current_url != "sqlite+aiosqlite:///./pvr.db":
-    config.set_main_option("sqlalchemy.url", _clean_url_for_alembic(current_url))
-elif getattr(settings, "DATABASE_URL", None):
-    config.set_main_option(
-        "sqlalchemy.url", _clean_url_for_alembic(settings.DATABASE_URL)
+# The environment variable is the ONLY source of truth.
+# alembic.ini's sqlalchemy.url is a placeholder and must never be used
+# for migrations — if it were, a deploy shell with DATABASE_URL unset
+# would silently run migrations against the local SQLite file and stamp
+# the wrong database.
+db_url = getattr(settings, "DATABASE_URL", None)
+
+if not db_url:
+    raise RuntimeError(
+        "alembic: DATABASE_URL is not set. Refusing to run migrations "
+        "against an unknown database. Set DATABASE_URL in the environment."
     )
+
+if db_url.startswith("sqlite"):
+    raise RuntimeError(
+        f"alembic: DATABASE_URL points at SQLite ({db_url!r}). Alembic "
+        "against SQLite in a deploy shell silently succeeds and stamps "
+        "the wrong database. Point DATABASE_URL at the real target, or "
+        "remove this guard if you genuinely intend to migrate a local "
+        "SQLite file."
+    )
+
+config.set_main_option("sqlalchemy.url", _clean_url_for_alembic(db_url))
 target_metadata = Base.metadata
 
 
