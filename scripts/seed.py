@@ -187,18 +187,28 @@ MOVIES: list[dict] = [
         "poster_url": "https://i.pinimg.com/736x/93/54/5f/93545f7e45707c04baf5a972efbcbc02.jpg",
         "times": [time(10, 0), time(14, 0), time(18, 30), time(22, 0)],
     },
+    {
+        "title": "Marco",
+        "duration_min": 148,
+        "language": "Malayalam",
+        "certificate": "A",
+        "release_year": 2024,
+        "genre": "Action, Crime, Thriller",
+        "poster_url": "https://image.tmdb.org/t/p/original/6Nj8Y1A9lcReqZZvRHOSiO3iTl6.jpg",
+        "times": [time(14, 15), time(18, 45), time(22, 30)],
+    },
 ]
 
 MOVIE_AVAILABILITY: dict[str, list[str]] = {
     "Kochi": [
         "I Am Game", "The Final Whistle", "Manjummel Boys", "Aavesham",
-        "Kingdom", "Bramayugam", "Vaazha", "Avengers: Endgame Encore",
+        "Kingdom", "Bramayugam", "Vaazha", "Avengers: Endgame Encore", "Marco",
     ],
     "Chennai": [
-        "I Am Game", "The Final Whistle", "Kingdom", "Avengers: Endgame Encore",
+        "I Am Game", "The Final Whistle", "Kingdom", "Avengers: Endgame Encore", "Marco",
     ],
     "Bangalore": [
-        "Manjummel Boys", "Aavesham", "Vaazha", "Avengers: Endgame Encore",
+        "Manjummel Boys", "Aavesham", "Vaazha", "Avengers: Endgame Encore", "Marco",
     ],
 }
 
