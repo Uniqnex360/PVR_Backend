@@ -194,18 +194,51 @@ MOVIES: list[dict] = [
         "poster_url": "https://i.pinimg.com/736x/93/54/5f/93545f7e45707c04baf5a972efbcbc02.jpg",
         "times": [time(10, 0), time(14, 0), time(18, 30), time(22, 0)],
     },
+    {
+        "title": "Marco",
+        "duration_min": 148,
+        "language": "Malayalam",
+        "certificate": "A",
+        "release_year": 2024,
+        "genre": "Action, Crime, Thriller",
+        "poster_url": "https://image.tmdb.org/t/p/original/m9BCqNvdjWqG1q3aXQxT7bFq03G.jpg",
+        "times": [time(12, 0), time(15, 30), time(19, 0), time(22, 30)],
+    },
+    {
+        "title": "Amaran",
+        "duration_min": 169,
+        "language": "Tamil, Malayalam",
+        "certificate": "UA",
+        "release_year": 2024,
+        "genre": "Action, Biography, Drama",
+        "poster_url": "https://image.tmdb.org/t/p/original/eCB06m1KUGilEOlIzb40nkQhVY0.jpg",
+        "times": [time(10, 30), time(14, 0), time(17, 30), time(21, 0)],
+    },
+    {
+        "title": "Deadpool & Wolverine",
+        "duration_min": 128,
+        "language": "Tamil, English",
+        "certificate": "A",
+        "release_year": 2024,
+        "genre": "Action, Comedy, Sci-Fi",
+        "poster_url": "https://image.tmdb.org/t/p/original/8cdWjvZQUExUUTzyp4t6EDMubfO.jpg",
+        "times": [time(11, 0), time(14, 30), time(18, 0), time(21, 30)],
+    },
 ]
 
 MOVIE_AVAILABILITY: dict[str, list[str]] = {
     "Kochi": [
         "I Am Game", "The Final Whistle", "Manjummel Boys", "Aavesham",
         "Kingdom", "Bramayugam", "Vaazha", "Avengers: Endgame Encore",
+        "Marco", "Amaran", "Deadpool & Wolverine",
     ],
     "Chennai": [
         "I Am Game", "The Final Whistle", "Kingdom", "Avengers: Endgame Encore",
+        "Amaran", "Deadpool & Wolverine", "Marco",
     ],
     "Bangalore": [
         "Manjummel Boys", "Aavesham", "Vaazha", "Avengers: Endgame Encore",
+        "Deadpool & Wolverine", "Amaran", "Marco",
     ],
 }
 
