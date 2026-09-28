@@ -44,6 +44,13 @@ ROW_CONFIGS: list[tuple[str, int, int]] = [
     ("J", 28, 39_000),
 ]
 
+COUPLE_ROW_CONFIGS: list[tuple[str, int, int]] = [
+    ("A", 12, 45_000),
+    ("B", 12, 45_000),
+    ("C", 12, 45_000),
+    ("D", 10, 50_000),
+]
+
 CITIES: dict[str, list[str]] = {
     "Kochi":     ["PVR Lulu Mall", "PVR Oberon Mall", "PVR Centre Square"],
     "Chennai":   ["PVR Grand Mall", "PVR Marina Mall", "PVR Ampa Skywalk"],
@@ -294,6 +301,37 @@ def _ensure_rows_and_seats(s: Session, screen_id: uuid.UUID) -> None:
             s.flush()
 
 
+def _ensure_couple_rows_and_seats(s: Session, screen_id: uuid.UUID) -> None:
+    for label, seat_count, price_cents in COUPLE_ROW_CONFIGS:
+        row = s.execute(
+            select(ScreenRow).where(
+                ScreenRow.screen_id == screen_id, ScreenRow.label == label
+            )
+        ).scalar_one_or_none()
+        if not row:
+            row = ScreenRow(
+                id=uuid.uuid4(),
+                screen_id=screen_id,
+                label=label,
+                seat_count=seat_count,
+                price_cents=price_cents,
+            )
+            s.add(row)
+            s.flush()
+        existing = s.execute(
+            select(func.count()).select_from(Seat).where(Seat.row_id == row.id)
+        ).scalar()
+        if existing == 0:
+            for num in range(1, seat_count + 1):
+                s.add(Seat(
+                    id=uuid.uuid4(),
+                    row_id=row.id,
+                    number=num,
+                    code=f"{label}{num:02d}",
+                ))
+            s.flush()
+
+
 def _ensure_movie(s: Session, spec: dict) -> Movie:
     movie = s.execute(
         select(Movie).where(Movie.title == spec["title"])
@@ -376,6 +414,38 @@ def seed(db_url: str | None = None) -> None:
                                         starts_at=utc_dt,
                                     ))
                                     total_showtimes += 1
+
+                # Screen 4 (Couple Recliners) - exclusive 2-seater couple recliners
+                couple_screen_name = "Screen 4 (Couple Recliners)"
+                couple_screen = _ensure_screen(s, cinema.id, couple_screen_name)
+                _ensure_couple_rows_and_seats(s, couple_screen.id)
+                total_screens += 1
+
+                couple_assigned = [
+                    available_specs[i % len(available_specs)]
+                    for i in range(min(2, len(available_specs)))
+                ]
+                for day_offset in range(8):
+                    target_date = today + timedelta(days=day_offset)
+                    for spec in couple_assigned:
+                        movie_obj = movies_by_title[spec["title"]]
+                        for t in spec["times"][:2]:
+                            local_dt = datetime.combine(target_date, t, tzinfo=tz)
+                            utc_dt = local_dt.astimezone(ZoneInfo("UTC"))
+                            st = s.execute(
+                                select(Showtime).where(
+                                    Showtime.screen_id == couple_screen.id,
+                                    Showtime.starts_at == utc_dt,
+                                )
+                            ).scalar_one_or_none()
+                            if not st:
+                                s.add(Showtime(
+                                    id=uuid.uuid4(),
+                                    screen_id=couple_screen.id,
+                                    movie_id=movie_obj.id,
+                                    starts_at=utc_dt,
+                                ))
+                                total_showtimes += 1
 
         s.commit()
 

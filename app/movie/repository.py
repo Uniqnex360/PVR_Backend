@@ -351,6 +351,19 @@ class MovieRepository:
                 "One or more selected seats do not exist on this screen"
             )
 
+        if "couple" in screen.name.lower():
+            if len(seat_ids) % 2 != 0:
+                raise InvalidSeatSelectionError(
+                    "Couple seats can only be booked in pairs of 2"
+                )
+            seat_map_by_row_num = {(s.row_id, s.number) for s, _ in seats_with_rows}
+            for seat, _ in seats_with_rows:
+                partner_num = seat.number + 1 if seat.number % 2 == 1 else seat.number - 1
+                if (seat.row_id, partner_num) not in seat_map_by_row_num:
+                    raise InvalidSeatSelectionError(
+                        f"Both seats of couple pair {seat.code} must be selected together"
+                    )
+
         ref_code = f"AGS-{uuid.uuid4().hex[:8].upper()}"
         booking = Booking(
             id=uuid.uuid4(),
@@ -574,6 +587,19 @@ class MovieRepository:
             raise InvalidSeatSelectionError(
                 "One or more selected seats do not exist on this screen or contain duplicates"
             )
+
+        if "couple" in screen.name.lower():
+            if len(seat_ids) % 2 != 0:
+                raise InvalidSeatSelectionError(
+                    "Couple seats can only be booked in pairs of 2"
+                )
+            seat_map_by_row_num = {(s.row_id, s.number) for s, _ in seats_with_rows}
+            for seat, _ in seats_with_rows:
+                partner_num = seat.number + 1 if seat.number % 2 == 1 else seat.number - 1
+                if (seat.row_id, partner_num) not in seat_map_by_row_num:
+                    raise InvalidSeatSelectionError(
+                        f"Both seats of couple pair {seat.code} must be selected together"
+                    )
 
         now_utc = datetime.now(timezone.utc)
         expires_at = now_utc + timedelta(seconds=ttl_seconds)
