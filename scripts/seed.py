@@ -201,7 +201,7 @@ MOVIES: list[dict] = [
         "certificate": "A",
         "release_year": 2024,
         "genre": "Action, Crime, Thriller",
-        "poster_url": "https://image.tmdb.org/t/p/original/m9BCqNvdjWqG1q3aXQxT7bFq03G.jpg",
+        "poster_url": "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRjDyqH1Yxeqpq2m5jJDcVKNDjcPn-GMJ2g4Ghna7eY2Q&s=10",
         "times": [time(12, 0), time(15, 30), time(19, 0), time(22, 30)],
     },
     {
