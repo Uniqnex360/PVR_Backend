@@ -352,8 +352,8 @@ class MovieRepository:
                 "One or more selected seats do not exist on this screen"
             )
 
-        couple_row_ids = {r.id for r in screen.rows if r.is_couple}
-        has_couple_selection = any(seat.row_id in couple_row_ids for seat in selected_seats)
+        couple_row_ids = {row.id for _, row in seats_with_rows if row.is_couple}
+        has_couple_selection = bool(couple_row_ids)
         if has_couple_selection:
             if len(seat_ids) % 2 != 0:
                 raise InvalidSeatSelectionError(
@@ -591,8 +591,8 @@ class MovieRepository:
                 "One or more selected seats do not exist on this screen or contain duplicates"
             )
 
-        couple_row_ids = {r.id for r in screen.rows if r.is_couple}
-        has_couple_selection = any(seat.row_id in couple_row_ids for seat in selected_seats)
+        couple_row_ids = {row.id for _, row in seats_with_rows if row.is_couple}
+        has_couple_selection = bool(couple_row_ids)
         if has_couple_selection:    
             if len(seat_ids) % 2 != 0:
                 raise InvalidSeatSelectionError(
