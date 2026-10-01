@@ -182,11 +182,11 @@ class MovieRepository:
 
             row_dtos.append(
                 RowProjectionDTO(
-                    label=r.label,
-                    price_cents=r.price_cents,
-                    is_couple=r.is_couple, 
-                    seats=seat_dtos,
-                )
+    label=r.label,
+    price_cents=r.price_cents,
+    seats=seat_dtos,
+    is_couple=r.is_couple,
+)
             )
 
         return SeatMapDTO(
