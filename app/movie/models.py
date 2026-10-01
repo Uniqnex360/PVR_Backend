@@ -8,6 +8,7 @@ import sqlalchemy as sa
 from sqlalchemy import (
     CheckConstraint,
     Column,
+    Boolean,text,
     ForeignKey,
     Index,
     Integer,
@@ -136,6 +137,7 @@ class ScreenRow(Base):
     screen_id = Column(
         sa.Uuid, ForeignKey("screens.id"), nullable=False
     )
+    is_couple = Column(Boolean, nullable=False, server_default=text("false"))
     label = Column(String, nullable=False)
     seat_count = Column(Integer, nullable=False)
     price_cents = Column(Integer, nullable=False)

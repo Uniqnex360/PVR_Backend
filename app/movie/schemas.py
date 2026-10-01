@@ -22,6 +22,7 @@ class SeatResponse(BaseModel):
 class RowResponse(BaseModel):
     label: str
     price_cents: int
+    is_couple: bool = False  
     seats: list[SeatResponse]
 
 

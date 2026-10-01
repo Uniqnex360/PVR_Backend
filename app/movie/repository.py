@@ -184,6 +184,7 @@ class MovieRepository:
                 RowProjectionDTO(
                     label=r.label,
                     price_cents=r.price_cents,
+                    is_couple=r.is_couple, 
                     seats=seat_dtos,
                 )
             )
@@ -351,7 +352,9 @@ class MovieRepository:
                 "One or more selected seats do not exist on this screen"
             )
 
-        if "couple" in screen.name.lower():
+        couple_row_ids = {r.id for r in screen.rows if r.is_couple}
+        has_couple_selection = any(seat.row_id in couple_row_ids for seat in selected_seats)
+        if has_couple_selection:
             if len(seat_ids) % 2 != 0:
                 raise InvalidSeatSelectionError(
                     "Couple seats can only be booked in pairs of 2"
@@ -588,7 +591,9 @@ class MovieRepository:
                 "One or more selected seats do not exist on this screen or contain duplicates"
             )
 
-        if "couple" in screen.name.lower():
+        couple_row_ids = {r.id for r in screen.rows if r.is_couple}
+        has_couple_selection = any(seat.row_id in couple_row_ids for seat in selected_seats)
+        if has_couple_selection:    
             if len(seat_ids) % 2 != 0:
                 raise InvalidSeatSelectionError(
                     "Couple seats can only be booked in pairs of 2"

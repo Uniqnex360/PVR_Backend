@@ -12,7 +12,7 @@ from zoneinfo import ZoneInfo
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from passlib.context import CryptContext
-from sqlalchemy import create_engine, func, select
+from sqlalchemy import create_engine, func, select, update
 from sqlalchemy.orm import Session
 
 from app.core.config import settings
@@ -420,7 +420,18 @@ def seed(db_url: str | None = None) -> None:
                     screen = _ensure_screen(s, cinema.id, screen_name)
                     _ensure_rows_and_seats(s, screen.id)
                     total_screens += 1
-
+                                       
+                    if screen_name == "Screen 3":
+                        for label in ("E", "F"):
+                            s.execute(
+                                update(ScreenRow)
+                                .where(
+                                    ScreenRow.screen_id == screen.id,
+                                    ScreenRow.label == label,
+                                )
+                                .values(is_couple=True)
+                            )
+                        s.flush()
                     assigned = [
                         available_specs[(screen_idx + i) % len(available_specs)]
                         for i in range(min(3, len(available_specs)))

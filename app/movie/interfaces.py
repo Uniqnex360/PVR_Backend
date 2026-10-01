@@ -49,6 +49,7 @@ class SeatProjectionDTO:
 class RowProjectionDTO:
     label: str
     price_cents: int
+    is_couple: bool = False 
     seats: list[SeatProjectionDTO]
 
 

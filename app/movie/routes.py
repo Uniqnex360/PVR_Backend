@@ -149,6 +149,7 @@ async def get_seat_map(
                 RowResponse(
                     label=r.label,
                     price_cents=r.price_cents,
+                    is_couple=r.is_couple, 
                     seats=[
                         SeatResponse(
                             id=s.id,
